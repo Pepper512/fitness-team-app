@@ -1,11 +1,13 @@
 // Fitness-Team service worker — offline app shell + exercise images
-const CACHE = 'fitness-team-v1';
+const CACHE = 'fitness-team-v2';
 const SHELL = [
   './',
   './index.html',
   './assets/plan.js',
   './assets/icon-192.png',
   './assets/icon-512.png',
+  './assets/apple-touch-icon.png',
+  './assets/favicon.png',
   './manifest.webmanifest'
 ];
 const IMG = ['goblet_squat','db_floor_press','db_rdl','db_ohp','db_curl','plank',
