@@ -1,5 +1,5 @@
 // Fitness-Team service worker — offline app shell + exercise images
-const CACHE = 'fitness-team-v2';
+const CACHE = 'fitness-team-v3';
 const SHELL = [
   './',
   './index.html',

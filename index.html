@@ -93,6 +93,7 @@
     <!-- PLAN -->
     <section id="v-plan" class="view">
       <div class="safety"><b>We coach, we don't diagnose.</b> Stop and seek care for chest pain, faintness, dizziness, unusual breathlessness, sharp/radiating pain, or numbness. Soreness is normal; joint pain is not.</div>
+      <div class="card" id="recoverycard" style="display:none"></div>
       <div class="card" id="weekcard"></div>
       <div class="card" id="hrcard"></div>
       <div class="card" id="cardiocard"></div>
@@ -118,6 +119,16 @@
           🔒 Your key is stored <b>only on this device</b> (your browser's local storage) and is sent straight to Anthropic — it's never in the app's code and never goes to anyone else.
           For personal use this is the simplest safe setup. If you ever shared this app with others, you'd route calls through a small server instead. Get a key at <b>console.anthropic.com</b>.
         </div>
+      </div>
+      <div class="card">
+        <h3>Whoop — recovery-aware coaching</h3>
+        <label>Whoop proxy URL (your Cloudflare Worker)</label>
+        <input id="whoopurl" type="url" placeholder="https://fitness-team-whoop.xxx.workers.dev" autocomplete="off">
+        <button class="btn" onclick="saveWhoop()">Save</button>
+        <button class="btn ghost" onclick="connectWhoop()">Connect Whoop</button>
+        <button class="btn ghost" onclick="disconnectWhoop()">Disconnect</button>
+        <div id="whoopmsg" class="note"></div>
+        <div class="note">One-time setup is in <b>whoop-proxy/WHOOP-SETUP.md</b>. Your Whoop secret lives in the Worker; only a rotating refresh token is stored on this device. Once connected, today's recovery/sleep/HRV show on the Plan tab and the coach adjusts your sessions to it.</div>
       </div>
       <div class="card">
         <h3>About</h3>
@@ -220,7 +231,7 @@ async function send(){
       method:'POST',
       headers:{ 'content-type':'application/json','x-api-key':key,
         'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
-      body:JSON.stringify({ model, max_tokens:1500, system:SYSTEM,
+      body:JSON.stringify({ model, max_tokens:1500, system:SYSTEM+whoopBlock(),
         messages: messages.map(m=>({role:m.role, content:m.content})) })
     });
     const data=await res.json();
@@ -253,6 +264,77 @@ async function testKey(){
                          : '<span class="err">'+(d.error?.message||('HTTP '+res.status))+'</span>';
     if(res.ok) saveKey();
   }catch(e){ m.innerHTML='<span class="err">'+e.message+'</span>'; }
+}
+
+// ---------- Whoop ----------
+const WURL='ft_whoop_url', WRT='ft_whoop_rt';
+function whoopBlock(){
+  const w=window.WHOOP_TODAY; if(!w) return '';
+  let s="\n\nTODAY'S WHOOP DATA — factor this into your advice. If recovery is low or sleep is poor, steer toward an easy Zone-2 day, lighter loads, or more rest, and briefly say why:";
+  if(w.recovery!=null) s+=`\n- Recovery: ${w.recovery}%`;
+  if(w.hrv!=null) s+=`\n- HRV: ${w.hrv} ms`;
+  if(w.rhr!=null) s+=`\n- Resting HR: ${w.rhr} bpm`;
+  if(w.sleepPct!=null) s+=`\n- Sleep performance: ${w.sleepPct}%`;
+  if(w.strain!=null) s+=`\n- Recent day strain: ${w.strain}`;
+  return s;
+}
+function saveWhoop(){ localStorage.setItem(WURL, document.getElementById('whoopurl').value.trim());
+  document.getElementById('whoopmsg').innerHTML='<span class="ok">Saved ✓</span>'; }
+function connectWhoop(){
+  const u=(localStorage.getItem(WURL)||document.getElementById('whoopurl').value.trim()).replace(/\/$/,'');
+  if(!u){ document.getElementById('whoopmsg').innerHTML='<span class="err">Enter your Worker URL first, then Save.</span>'; return; }
+  localStorage.setItem(WURL,u); location.href=u+'/auth/login';
+}
+function disconnectWhoop(){ localStorage.removeItem(WRT); window.WHOOP_TODAY=null;
+  document.getElementById('whoopmsg').innerHTML='<span class="ok">Disconnected.</span>'; renderRecoveryPrompt(); }
+function handleWhoopRedirect(){
+  const m=location.hash.match(/whoop_rt=([^&]+)/);
+  if(m){ localStorage.setItem(WRT, decodeURIComponent(m[1]));
+    history.replaceState(null,'',location.pathname+location.search); }
+}
+async function loadWhoopToday(){
+  const url=localStorage.getItem(WURL), rt=localStorage.getItem(WRT);
+  if(!url||!rt){ renderRecoveryPrompt(); return; }
+  const card=document.getElementById('recoverycard'); card.style.display='block';
+  card.innerHTML='<h3>Whoop · Today</h3><div class="note">Loading…</div>';
+  try{
+    const res=await fetch(url.replace(/\/$/,'')+'/whoop/today',{headers:{authorization:'Bearer '+rt}});
+    const d=await res.json();
+    if(d.error) throw new Error(d.error);
+    if(d.new_refresh_token) localStorage.setItem(WRT, d.new_refresh_token);
+    const rec=d.recovery||{}, sl=d.sleep||{};
+    window.WHOOP_TODAY={
+      recovery: rec.recovery_score ?? null,
+      hrv: rec.hrv_rmssd_milli!=null ? Math.round(rec.hrv_rmssd_milli) : null,
+      rhr: rec.resting_heart_rate ?? null,
+      sleepPct: sl.sleep_performance_percentage ?? null,
+      strain: d.strain!=null ? Math.round(d.strain*10)/10 : null
+    };
+    renderRecovery(window.WHOOP_TODAY);
+  }catch(e){
+    card.innerHTML='<h3>Whoop · Today</h3><div class="note err">Couldn\'t load ('+e.message+'). Reconnect in ⚙️ Settings.</div>';
+  }
+}
+function renderRecovery(W){
+  const card=document.getElementById('recoverycard'); const r=W.recovery;
+  const color=r==null?'#94a3b8':r>=67?'#10b981':r>=34?'#f59e0b':'#f87171';
+  const advice=r==null?'':r>=67?'Green — go for your planned strength day.':r>=34?'Yellow — train, but keep it moderate; drop a set if it drags.':'Red — favor an easy Zone-2 walk today and let your body recover.';
+  card.style.display='block';
+  card.innerHTML=`<h3>Whoop · Today</h3>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div style="font-size:36px;font-weight:800;color:${color};line-height:1">${r==null?'—':r+'%'}</div>
+      <div style="font-size:12.5px;color:var(--mut);line-height:1.5">
+        ${W.hrv!=null?`HRV <b style="color:var(--txt)">${W.hrv} ms</b><br>`:''}
+        ${W.rhr!=null?`Resting HR <b style="color:var(--txt)">${W.rhr} bpm</b><br>`:''}
+        ${W.sleepPct!=null?`Sleep <b style="color:var(--txt)">${W.sleepPct}%</b>`:''}
+      </div>
+    </div>
+    ${advice?`<div class="note" style="margin-top:8px;color:${color}">${advice}</div>`:''}
+    <div class="note">Your coach now factors this into today's advice.</div>`;
+}
+function renderRecoveryPrompt(){
+  const card=document.getElementById('recoverycard'); card.style.display='block';
+  card.innerHTML='<h3>Whoop · Recovery</h3><div class="note">Connect Whoop in ⚙️ Settings to see today\'s recovery, HRV and sleep here — and let the coach adjust your sessions to how recovered you are.</div>';
 }
 
 // ---------- render plan ----------
@@ -299,7 +381,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   // restore settings
   document.getElementById('apikey').value=localStorage.getItem(KEY)||'';
   document.getElementById('model').value=localStorage.getItem(MODELK)||'claude-sonnet-4-6';
-  renderHistory(); renderPlan();
+  document.getElementById('whoopurl').value=localStorage.getItem(WURL)||'';
+  handleWhoopRedirect();
+  renderHistory(); renderPlan(); loadWhoopToday();
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 });
 </script>
