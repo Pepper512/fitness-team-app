@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<title>Fitness-Team</title>
+<style>
+  :root{ --bg:#0f172a; --panel:#1e293b; --panel2:#273449; --teal:#10b981; --teal-d:#0f766e; --blue:#3b82f6; --txt:#e2e8f0; --mut:#94a3b8; --line:#334155; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; background:var(--bg); color:var(--txt);
+    font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:15px; }
+  #app{ display:flex; flex-direction:column; height:100dvh; }
+  header{ background:linear-gradient(135deg,var(--teal-d),#0e7490); padding:max(10px,env(safe-area-inset-top)) 14px 10px; }
+  header h1{ margin:0; font-size:18px; letter-spacing:-.3px; }
+  header p{ margin:2px 0 0; font-size:11px; opacity:.85; }
+  main{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .view{ display:none; padding:12px; } .view.active{ display:block; }
+  /* chat */
+  #chat{ display:flex; flex-direction:column; gap:10px; padding-bottom:6px; }
+  .msg{ max-width:86%; padding:9px 12px; border-radius:14px; line-height:1.42; font-size:14.5px; white-space:normal; }
+  .msg.user{ align-self:flex-end; background:var(--blue); color:#fff; border-bottom-right-radius:4px; }
+  .msg.bot{ align-self:flex-start; background:var(--panel); border:1px solid var(--line); border-bottom-left-radius:4px; }
+  .msg.bot b{ color:#fff; } .msg.bot h4{ margin:8px 0 3px; color:var(--teal); font-size:14px; }
+  .msg.bot ul{ margin:4px 0; padding-left:18px; } .msg.bot li{ margin:2px 0; }
+  .typing{ color:var(--mut); font-style:italic; }
+  .composer{ display:flex; gap:8px; padding:8px; padding-bottom:max(8px,env(safe-area-inset-bottom)); background:var(--panel); border-top:1px solid var(--line); }
+  .composer textarea{ flex:1; resize:none; background:var(--panel2); color:var(--txt); border:1px solid var(--line);
+    border-radius:12px; padding:10px 12px; font-size:15px; max-height:120px; font-family:inherit; }
+  .composer button{ background:var(--teal); color:#04261b; border:0; border-radius:12px; padding:0 16px; font-weight:700; font-size:15px; }
+  .composer button:disabled{ opacity:.5; }
+  .hint{ text-align:center; color:var(--mut); font-size:12px; padding:14px; }
+  .chip{ display:inline-block; background:var(--panel2); border:1px solid var(--line); color:var(--txt);
+    border-radius:99px; padding:6px 11px; margin:3px; font-size:12.5px; }
+  /* plan */
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:12px; }
+  .card h3{ margin:0 0 8px; font-size:15px; }
+  .badge{ background:var(--teal); color:#04261b; font-weight:700; font-size:12px; padding:2px 8px; border-radius:6px; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  th,td{ text-align:left; padding:6px 6px; border-bottom:1px solid var(--line); }
+  th{ color:var(--mut); font-weight:600; }
+  tr.z2 td{ background:rgba(59,130,246,.16); font-weight:600; }
+  .wk td:first-child{ font-weight:700; width:64px; }
+  .tag-str{ color:var(--teal); font-weight:700; } .tag-car{ color:var(--blue); font-weight:700; }
+  .exrow{ display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--line); }
+  .exrow:last-child{ border-bottom:0; }
+  .exrow img{ width:58px; height:58px; object-fit:contain; background:#fff; border-radius:9px; flex:none; }
+  .exrow .nm{ font-weight:600; font-size:14px; } .exrow .sc{ color:var(--teal); font-size:12.5px; font-weight:700; }
+  .exrow .cue{ color:var(--mut); font-size:11.5px; margin-top:2px; }
+  .safety{ background:#3b2a14; border:1px solid #b45309; border-radius:12px; padding:10px 12px; font-size:12px; margin-bottom:12px; }
+  .safety b{ color:#fdba74; }
+  /* settings */
+  label{ display:block; font-size:13px; color:var(--mut); margin:12px 0 4px; }
+  input,select{ width:100%; background:var(--panel2); color:var(--txt); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:15px; }
+  .btn{ display:block; width:100%; background:var(--teal); color:#04261b; border:0; border-radius:12px; padding:12px; font-weight:700; font-size:15px; margin-top:14px; }
+  .btn.ghost{ background:var(--panel2); color:var(--txt); border:1px solid var(--line); }
+  .note{ font-size:11.5px; color:var(--mut); line-height:1.5; margin-top:10px; }
+  .ok{ color:var(--teal); } .err{ color:#f87171; }
+  /* tab bar */
+  nav{ display:flex; background:var(--panel); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom); }
+  nav button{ flex:1; background:none; border:0; color:var(--mut); font-size:11px; padding:9px 0 7px; }
+  nav button .ic{ font-size:19px; display:block; }
+  nav button.active{ color:var(--teal); }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Fitness-Team</h1>
+    <p id="hdrsub">Your panel of trainers · XS1 · NordicTrack/iFIT</p>
+  </header>
+
+  <main>
+    <!-- COACH -->
+    <section id="v-coach" class="view active">
+      <div id="chat"></div>
+      <div id="welcome" class="hint">
+        <p>👋 Ask your team anything — a workout for today, how to scale a lift, an easy run pace, recovery, form.</p>
+        <div>
+          <span class="chip" onclick="quick(this)">Give me a 30-min dumbbell workout</span>
+          <span class="chip" onclick="quick(this)">What's an easy Zone-2 pace for me?</span>
+          <span class="chip" onclick="quick(this)">My knee is cranky on squats — swap?</span>
+          <span class="chip" onclick="quick(this)">How do I progress next week?</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- PLAN -->
+    <section id="v-plan" class="view">
+      <div class="safety"><b>We coach, we don't diagnose.</b> Stop and seek care for chest pain, faintness, dizziness, unusual breathlessness, sharp/radiating pain, or numbness. Soreness is normal; joint pain is not.</div>
+      <div class="card" id="weekcard"></div>
+      <div class="card" id="hrcard"></div>
+      <div class="card" id="cardiocard"></div>
+      <div id="days"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="v-set" class="view">
+      <div class="card">
+        <h3>Connect your coach</h3>
+        <label>Anthropic API key</label>
+        <input id="apikey" type="password" placeholder="sk-ant-..." autocomplete="off">
+        <label>Model</label>
+        <select id="model">
+          <option value="claude-sonnet-4-6">Sonnet 4.6 — fast, great default</option>
+          <option value="claude-opus-4-8">Opus 4.8 — deepest coaching</option>
+          <option value="claude-haiku-4-5-20251001">Haiku 4.5 — quickest/cheapest</option>
+        </select>
+        <button class="btn" onclick="saveKey()">Save</button>
+        <button class="btn ghost" onclick="testKey()">Test connection</button>
+        <div id="setmsg" class="note"></div>
+        <div class="note">
+          🔒 Your key is stored <b>only on this device</b> (your browser's local storage) and is sent straight to Anthropic — it's never in the app's code and never goes to anyone else.
+          For personal use this is the simplest safe setup. If you ever shared this app with others, you'd route calls through a small server instead. Get a key at <b>console.anthropic.com</b>.
+        </div>
+      </div>
+      <div class="card">
+        <h3>About</h3>
+        <div class="note">Fitness-Team is a coaching aid, not medical care. It gives training guidance based on the info you share. Always get a doctor's OK before starting harder training at 62+, and stop for any red-flag symptom.</div>
+        <button class="btn ghost" onclick="resetChat()">Clear conversation</button>
+      </div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="t-coach" class="active" onclick="tab('coach')"><span class="ic">💬</span>Coach</button>
+    <button id="t-plan" onclick="tab('plan')"><span class="ic">📋</span>Plan</button>
+    <button id="t-set" onclick="tab('set')"><span class="ic">⚙️</span>Settings</button>
+  </nav>
+</div>
+
+<script src="assets/plan.js"></script>
+<script>
+const SYSTEM = `You are Fitness-Team, a coordinated panel of highly skilled personal trainers and exercise-program advisors, speaking to a 62-year-old user whose goal is muscle building + fat loss. You are the head coach: speak as one team — consensus first, then short notes from the relevant specialists only.
+
+SAFETY (non-negotiable):
+- You coach, you do NOT diagnose or replace medical care.
+- Before intense plans, ask about injuries, meds, limitations, training history, sleep, recovery, goals.
+- If the user mentions chest pain, faintness, dizziness, unusual shortness of breath, sharp/radiating pain, or neurological symptoms (numbness, tingling, vision changes, one-sided weakness), tell them to STOP and seek medical care now.
+- Prefer progressive overload, recovery, consistency over "grind harder."
+- Label evidence honestly: well-supported vs. trainer preference vs. biohacking idea.
+
+THE TEAM (perspectives you synthesize): Lead Strength Coach; OxeFit XS1 Programming + Assessment/Safety specialists; iFIT/NordicTrack Treadmill Programming + Mechanics specialists; Knox Robinson & Hannah Eden iFIT analysts (analyze their PUBLIC style — never impersonate or claim to be them); Recovery & Mobility Coach; Evidence & Book Synthesis Coach.
+
+USER CONTEXT (already known — don't re-ask): 62 years old; goal muscle building + fat loss (aiming lean); no injuries reported; equipment = dumbbells + bodyweight right now (OxeFit XS1 is down for repair), plus a NordicTrack treadmill with iFIT; trains ~45 min, alternating 3 strength days (A Squat&Press, B Hinge&Pull, C Full-Body) with easy iFIT walk/jog days in Zone 2 (~95–111 bpm), one rest day. Likes all the iFIT walk/jog programs. Estimated HRmax ~158.
+
+HOW TO ANSWER:
+- Consensus first, then brief specialist notes.
+- Be specific: sets, reps, RPE/RIR, rest, duration, incline/speed/HR targets, progression rules.
+- Offer dumbbell/bodyweight/treadmill substitutions.
+- Keep it realistic for ~45 min. Add a short "why this works" and a "watch-outs" line.
+- Keep replies concise and mobile-friendly. Use short paragraphs, **bold** key numbers, and simple bullet lists. Ask a quick clarifying question only when truly needed.`;
+
+const KEY='ft_key', MODELK='ft_model', HIST='ft_hist';
+let messages = JSON.parse(localStorage.getItem(HIST) || '[]');
+
+// ---------- tabs ----------
+function tab(n){
+  ['coach','plan','set'].forEach(x=>{
+    document.getElementById('v-'+x).classList.toggle('active', x===n);
+    document.getElementById('t-'+x).classList.toggle('active', x===n);
+  });
+  const comp=document.querySelector('.composer'); if(comp) comp.style.display = n==='coach' ? 'flex' : 'none';
+  if(n==='coach') scrollChat();
+}
+
+// ---------- tiny markdown ----------
+function fmt(t){
+  let h = t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  h = h.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+  const lines = h.split('\n'); let out=''; let inUl=false;
+  for(let ln of lines){
+    if(/^\s*[-•]\s+/.test(ln)){ if(!inUl){out+='<ul>';inUl=true;} out+='<li>'+ln.replace(/^\s*[-•]\s+/,'')+'</li>'; }
+    else { if(inUl){out+='</ul>';inUl=false;}
+      if(/^#{1,4}\s+/.test(ln)) out+='<h4>'+ln.replace(/^#{1,4}\s+/,'')+'</h4>';
+      else if(ln.trim()==='') out+='<br>';
+      else out+='<div>'+ln+'</div>'; }
+  }
+  if(inUl)out+='</ul>';
+  return out;
+}
+
+// ---------- chat ----------
+function addBubble(role, text){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div');
+  d.className='msg '+(role==='user'?'user':'bot');
+  d.innerHTML = role==='user' ? text.replace(/</g,'&lt;') : fmt(text);
+  c.appendChild(d); scrollChat(); return d;
+}
+function scrollChat(){ const m=document.querySelector('main'); m.scrollTop=m.scrollHeight; }
+function resetChat(){ messages=[]; localStorage.removeItem(HIST); document.getElementById('chat').innerHTML='';
+  document.getElementById('welcome').style.display='block'; tab('coach'); }
+function quick(el){ document.getElementById('box').value=el.textContent; send(); }
+
+function renderHistory(){
+  document.getElementById('chat').innerHTML='';
+  messages.forEach(m=>addBubble(m.role, typeof m.content==='string'?m.content:''));
+  document.getElementById('welcome').style.display = messages.length?'none':'block';
+}
+
+async function send(){
+  const box=document.getElementById('box');
+  const text=box.value.trim(); if(!text) return;
+  const key=localStorage.getItem(KEY);
+  if(!key){ tab('set'); document.getElementById('setmsg').innerHTML='<span class="err">Add your Anthropic API key first.</span>'; return; }
+  box.value=''; box.style.height='auto';
+  document.getElementById('welcome').style.display='none';
+  messages.push({role:'user', content:text}); addBubble('user', text);
+  const sb=document.getElementById('sendbtn'); sb.disabled=true;
+  const t=addBubble('bot',''); t.innerHTML='<span class="typing">Your team is thinking…</span>';
+  try{
+    const model=localStorage.getItem(MODELK)||'claude-sonnet-4-6';
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{ 'content-type':'application/json','x-api-key':key,
+        'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
+      body:JSON.stringify({ model, max_tokens:1500, system:SYSTEM,
+        messages: messages.map(m=>({role:m.role, content:m.content})) })
+    });
+    const data=await res.json();
+    if(!res.ok){ throw new Error(data.error?.message || ('HTTP '+res.status)); }
+    const reply=(data.content||[]).map(b=>b.text||'').join('').trim() || '(no response)';
+    t.innerHTML=fmt(reply);
+    messages.push({role:'assistant', content:reply});
+    localStorage.setItem(HIST, JSON.stringify(messages.slice(-30)));
+  }catch(e){
+    t.innerHTML='<span class="err">⚠️ '+e.message+'</span><br><span class="typing">Check your key/connection in Settings.</span>';
+  }finally{ sb.disabled=false; scrollChat(); }
+}
+
+// ---------- settings ----------
+function saveKey(){
+  localStorage.setItem(KEY, document.getElementById('apikey').value.trim());
+  localStorage.setItem(MODELK, document.getElementById('model').value);
+  document.getElementById('setmsg').innerHTML='<span class="ok">Saved on this device ✓</span>';
+}
+async function testKey(){
+  const m=document.getElementById('setmsg'); const key=document.getElementById('apikey').value.trim();
+  if(!key){ m.innerHTML='<span class="err">Enter a key first.</span>'; return; }
+  m.textContent='Testing…';
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST',
+      headers:{ 'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
+      body:JSON.stringify({ model:document.getElementById('model').value, max_tokens:16, messages:[{role:'user',content:'say ok'}] }) });
+    const d=await res.json();
+    m.innerHTML = res.ok ? '<span class="ok">Connected ✓ Your team is ready.</span>'
+                         : '<span class="err">'+(d.error?.message||('HTTP '+res.status))+'</span>';
+    if(res.ok) saveKey();
+  }catch(e){ m.innerHTML='<span class="err">'+e.message+'</span>'; }
+}
+
+// ---------- render plan ----------
+function renderPlan(){
+  const P=window.PLAN;
+  // week
+  let w='<h3>Your Week — starts today</h3><table class="wk"><tr><th>Day</th><th>Session</th><th>Detail</th></tr>';
+  P.week.forEach(r=>{ const cls=r[3]==='str'?'tag-str':r[3]==='car'?'tag-car':'';
+    w+=`<tr><td>${r[0]}</td><td class="${cls}">${r[1]}</td><td>${r[2]}</td></tr>`; });
+  w+='</table><div class="note" style="margin-top:8px">Alternate walk/run → strength, with one rest day. Never two strength days back-to-back.</div>';
+  document.getElementById('weekcard').innerHTML=w;
+  // hr
+  let h=`<h3>Heart-Rate Zones · age 62 (max ≈ ${P.hrMax} bpm)</h3><table><tr><th>Zone</th><th>BPM</th><th>Feel</th></tr>`;
+  P.zones.forEach(z=>{ const z2=z[0].includes('★')?' class="z2"':''; h+=`<tr${z2}><td>${z[0]}</td><td><b>${z[2]}</b></td><td>${z[3]}</td></tr>`; });
+  h+='</table><div class="note" style="margin-top:8px">Live in <b>Zone 2 (95–111 bpm)</b> for walks/jogs — easy enough to talk. On heart/BP meds your HR runs lower, so use the talk test instead.</div>';
+  document.getElementById('hrcard').innerHTML=h;
+  // cardio menu
+  let c='<h3>iFIT Walk/Jog — pick any</h3>';
+  P.cardioMenu.forEach(x=> c+='<span class="chip">'+x+'</span>');
+  c+='<div class="note" style="margin-top:8px">Keep every one Zone 2 / conversational, ActivePulse on, 30–45 min.</div>';
+  document.getElementById('cardiocard').innerHTML=c;
+  // days
+  let d='';
+  P.days.forEach(day=>{
+    d+=`<div class="card"><h3><span class="badge">Strength ${day.id}</span> ${day.title}</h3>`;
+    day.ex.forEach(e=>{ d+=`<div class="exrow"><img src="assets/images/${e[0]}.jpg" alt="" loading="lazy">
+      <div><div class="nm">${e[1]}</div><div class="sc">${e[2]}</div><div class="cue">${e[3]}</div></div></div>`; });
+    d+='</div>';
+  });
+  document.getElementById('days').innerHTML=d;
+}
+
+// ---------- init ----------
+document.addEventListener('DOMContentLoaded',()=>{
+  // composer
+  const main=document.querySelector('main');
+  const comp=document.createElement('div'); comp.className='composer';
+  comp.innerHTML='<textarea id="box" rows="1" placeholder="Ask your team…"></textarea><button id="sendbtn">Send</button>';
+  document.getElementById('app').insertBefore(comp, document.querySelector('nav'));
+  const box=document.getElementById('box');
+  box.addEventListener('input',()=>{ box.style.height='auto'; box.style.height=Math.min(box.scrollHeight,120)+'px'; });
+  box.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); } });
+  document.getElementById('sendbtn').addEventListener('click', send);
+  // restore settings
+  document.getElementById('apikey').value=localStorage.getItem(KEY)||'';
+  document.getElementById('model').value=localStorage.getItem(MODELK)||'claude-sonnet-4-6';
+  renderHistory(); renderPlan();
+  if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+});
+</script>
+</body>
+</html>
