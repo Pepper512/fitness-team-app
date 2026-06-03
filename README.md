@@ -57,6 +57,24 @@ Typical cost is a fraction of a cent per question on Sonnet.
 
 ---
 
+## Whoop recovery sync
+
+The Whoop proxy Worker is deployed here:
+
+```text
+https://fitness-team-whoop.pepper512.workers.dev
+```
+
+Use this exact redirect URI in the Whoop developer app:
+
+```text
+https://fitness-team-whoop.pepper512.workers.dev/auth/callback
+```
+
+The app pre-fills the Worker URL in **Settings → Whoop**. Save it, then tap **Connect Whoop** and approve the Whoop OAuth prompt.
+
+---
+
 ## About your key & security (read once)
 
 Your key is stored **only on your device** (browser `localStorage`), is sent **straight to Anthropic**, and is **never in the app's code** or shared with anyone. For a **personal, single-user** app this is the simplest safe setup.

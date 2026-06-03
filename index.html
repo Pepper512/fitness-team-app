@@ -123,7 +123,7 @@
       <div class="card">
         <h3>Whoop — recovery-aware coaching</h3>
         <label>Whoop proxy URL (your Cloudflare Worker)</label>
-        <input id="whoopurl" type="url" placeholder="https://fitness-team-whoop.xxx.workers.dev" autocomplete="off">
+        <input id="whoopurl" type="url" placeholder="https://fitness-team-whoop.pepper512.workers.dev" autocomplete="off">
         <button class="btn" onclick="saveWhoop()">Save</button>
         <button class="btn ghost" onclick="connectWhoop()">Connect Whoop</button>
         <button class="btn ghost" onclick="disconnectWhoop()">Disconnect</button>
@@ -268,6 +268,7 @@ async function testKey(){
 
 // ---------- Whoop ----------
 const WURL='ft_whoop_url', WRT='ft_whoop_rt';
+const DEFAULT_WHOOP_URL='https://fitness-team-whoop.pepper512.workers.dev';
 function whoopBlock(){
   const w=window.WHOOP_TODAY; if(!w) return '';
   let s="\n\nTODAY'S WHOOP DATA — factor this into your advice. If recovery is low or sleep is poor, steer toward an easy Zone-2 day, lighter loads, or more rest, and briefly say why:";
@@ -381,7 +382,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   // restore settings
   document.getElementById('apikey').value=localStorage.getItem(KEY)||'';
   document.getElementById('model').value=localStorage.getItem(MODELK)||'claude-sonnet-4-6';
-  document.getElementById('whoopurl').value=localStorage.getItem(WURL)||'';
+  document.getElementById('whoopurl').value=localStorage.getItem(WURL)||DEFAULT_WHOOP_URL;
   handleWhoopRedirect();
   renderHistory(); renderPlan(); loadWhoopToday();
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }

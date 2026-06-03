@@ -25,7 +25,10 @@ cd whoop-proxy
 npx wrangler login            # opens browser, approve once
 npx wrangler deploy           # prints your Worker URL
 ```
-Note the printed URL, e.g. `https://fitness-team-whoop.jim.workers.dev`.
+Your deployed Worker URL is:
+```text
+https://fitness-team-whoop.pepper512.workers.dev
+```
 
 Then set your secrets (they never touch the app or git):
 ```bash
@@ -36,7 +39,7 @@ npx wrangler secret put WHOOP_CLIENT_SECRET   # paste Client Secret
 ## Step 3 — Finish the Whoop redirect URI
 Back in the Whoop developer dashboard, set the app's **Redirect URI** to exactly:
 ```
-https://fitness-team-whoop.<your-subdomain>.workers.dev/auth/callback
+https://fitness-team-whoop.pepper512.workers.dev/auth/callback
 ```
 (your Worker URL + `/auth/callback`). Save.
 
